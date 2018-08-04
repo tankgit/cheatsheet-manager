@@ -14,6 +14,9 @@ FM['BLD']='\033[1m'
 FM['NAME']=''
 FM['CATE']=''
 FM['TAGS']=''
+FM['FNAME']=''
+FM['FCATE']=''
+FM['FTAGS']=''
 
 def options(args):
     if args==None:
@@ -24,7 +27,7 @@ def options(args):
         opt=args[0][2]
     else:
         helps()
-    if len(args)<2 and opt not in ['u','l']:
+    if len(args)<2 and opt not in ['u','l','L']:
         helps()
     elif opt=='h':
         helps()
@@ -45,6 +48,8 @@ def options(args):
         if len(args)>1:
             param=args[1]
         listall(param)
+    elif opt=='L':
+        listall('L')
     else:
         helps()
     
@@ -154,19 +159,19 @@ def search(expr):
     if r_n==[]:
         print('No results',end='')
     for n in r_n:
-        print(n,end='\t')
+        print(FM['FNAME']+n+FM['CLR'],end='\t')
     print()
     print('\nResults of '+FM['CATE']+FM['BLD']+'Categories'+FM['CLR']+':')
     if r_c==[]:
         print('No results',end='')
     for c in r_c:
-        print(c,end='\t')
+        print(FM['FNAME']+n+FM['CLR'],end='\t')
     print()
     print('\nResults of '+FM['TAGS']+FM['BLD']+'Tags'+FM['CLR']+':')
     if r_t==[]:
         print('No results',end='')
     for t in r_t:
-        print(t,end='\t')
+        print(FM['FNAME']+n+FM['CLR'],end='\t')
     print()
     return r_n,r_c,r_t
 
@@ -248,7 +253,7 @@ def bookmark(names):
 def listall(param):
     if bool(CONFIG['AUTO_UPDATE']):
         update()
-    if param and (param.lower()=='b' or param.lower()=='bookmark'):
+    if param and (param=='b' or param=='bookmark'):
         bookmarks=open(CONFIG['CHEAT_PATH']+'/.bookmarks','r')
         bm=[]
         for line in bookmarks:
@@ -263,44 +268,71 @@ def listall(param):
         print()
         return
     table=open(CONFIG['CHEAT_PATH']+'/.table', 'r')
-    datas=[]
+    datas={}
     sort_t={}
     sort_c={}
     for line in table.readlines():
-        data={}
-        data['name'],cate,tags=line.rstrip().strip().split(' ',2)
-        data['cate']=cate
-        data['tags']=tags.split(' ')
-        datas.append(data)
-        for t in data['tags']:
+        name,cate,tags=line.rstrip().strip().split(' ',2)
+        datas[name]=[cate,tags.split(' ')]
+        for t in tags.split(' '):
             if t not in sort_t:
                 sort_t[t]=[]
-            sort_t[t].append(data['name'])
+            sort_t[t].append(name)
         if cate not in sort_c:
             sort_c[cate]=[]
-        sort_c[cate].append(data['name'])
+        sort_c[cate].append(name)
     if param:
-        if param.lower()=='t' or param.lower()=='tag':
+        if param=='t' or param=='tag':
             print('All cheatsheets sorted by '+FM['BLD']+'TAGS'+FM['CLR']+':')
             if 'untaged' in sort_t:
                 untaged=sort_t.pop('untaged')
                 sort_t['untaged']=untaged
             for t in sort_t:
-                print(FM['TAGS']+FM['BLD']+'[ '+t+' ]'+FM['CLR'])
+                print(FM['TAGS']+FM['BLD']+' '+t+' '+FM['CLR'])
                 for n in sort_t[t]:
-                    print(n,end='\t')
+                    print(FM['FNAME']+n+FM['CLR'],end='\t')
                 print('\n')
-        if param=='c' or param.lower()=='category':
+        if param=='c' or param=='category':
             print('All cheatsheets sorted by '+FM['BLD']+'CATEGORIES'+FM['CLR']+':')
             for c in sort_c:
-                print(FM['CATE']+FM['BLD']+'[ '+c+' ]'+FM['CLR'])
+                print(FM['CATE']+FM['BLD']+' '+c+' '+FM['CLR'])
                 for n in sort_c[c]:
-                    print(n,end='\t')
+                    print(FM['FNAME']+n+FM['CLR'],end='\t')
                 print()
+        if param=='T' or param=='Tag':
+            print('All cheatsheets sorted by '+FM['BLD']+'TAGS'+FM['CLR']+' with details:')
+            if 'untaged' in sort_t:
+                untaged=sort_t.pop('untaged')
+                sort_t['untaged']=untaged
+            for t in sort_t:
+                print(FM['TAGS']+FM['BLD']+' '+t+' '+FM['CLR'])
+                for n in sort_t[t]:
+                    print(FM['FNAME']+n+'\t'+FM['FCATE']+datas[n][0],end='\t\t')
+                    for t in datas[n][1]:
+                        print(FM['FTAGS']+t+FM['CLR'],end=' ')
+                    print(FM['CLR'])
+                print('\n')
+        if param=='C' or param=='Category':
+            print('All cheatsheets sorted by '+FM['BLD']+'CATEGORIES'+FM['CLR']+':')
+            for c in sort_c:
+                print(FM['CATE']+FM['BLD']+' '+c+' '+FM['CLR'])
+                for n in sort_c[c]:
+                    print(FM['FNAME']+n+'\t'+FM['FCATE']+datas[n][0],end='\t\t')
+                    for t in datas[n][1]:
+                        print(FM['FTAGS']+t+FM['CLR'],end=' ')
+                    print(FM['CLR'])
+                print()
+        if param=='L':
+            print('All cheatsheets:')
+            for n in datas:
+                print(FM['FNAME']+n+'\t'+FM['FCATE']+datas[n][0],end='\t\t')
+                for t in datas[n][1]:
+                    print(FM['FTAGS']+t+FM['CLR'],end=' ')
+                print(FM['CLR'])
     else:
         print('All cheatsheets:')
-        for d in datas:
-            print(d['name'],end='\t')
+        for n in datas:
+            print(FM['FNAME']+n+FM['CLR'],end='\t')
         print()
 
 def config():
@@ -350,6 +382,9 @@ def config():
         FM['NAME']='\033[48;5;'+CONFIG['COLOR_BG_NAME']+';38;5;'+CONFIG['COLOR_FG_NAME']+'m'
         FM['CATE']='\033[48;5;'+CONFIG['COLOR_BG_CATE']+';38;5;'+CONFIG['COLOR_FG_CATE']+'m'
         FM['TAGS']='\033[48;5;'+CONFIG['COLOR_BG_TAGS']+'m\033[38;5;'+CONFIG['COLOR_FG_TAGS']+'m'
+        FM['FNAME']='\033[38;5;'+CONFIG['COLOR_FG_NAME']+'m'
+        FM['FCATE']='\033[38;5;'+CONFIG['COLOR_FG_CATE']+'m'
+        FM['FTAGS']='\033[38;5;'+CONFIG['COLOR_FG_TAGS']+'m'
 
 def helps():
     print('Usage: ch [OPTION] [PARAMS]')
@@ -362,6 +397,7 @@ def helps():
     print('  -r, --remove NAMES\tRemove one or several cheatsheets by name')
     print('  -b, --bookmark NAMES\tToggle states for cheatsheets whether they are \n\t\t\tbookmarked')
     print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories; use "b" to list bookmarks')
+    print('  -L\t\t\tList all cheatsheets with details')
     print('  -u, --update\t\tUpdate cache file, including bookmark list; Set \n\t\t\tAUTO_UPDATE in config to automaticly update after \n\t\t\tadd/edit/remove your cheatsheets')
     print('  -h, --help\t\tShow usage page')
     print()
