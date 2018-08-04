@@ -8,7 +8,12 @@ import re
 HOME=os.environ.get('HOME')
 CONFIG_PATH=HOME+'/.config/ch.conf'
 CONFIG={}
-
+FM={}
+FM['CLR']='\033[0m'
+FM['BLD']='\033[1m'
+FM['NAME']=''
+FM['CATE']=''
+FM['TAGS']=''
 
 def options(args):
     if args==None:
@@ -92,7 +97,7 @@ def update():
                     break
             record=name[:-3]+' '+cate
             if cate=='':
-                cate='Default'
+                cate='default'
             if tags==[]:
                 tags.append('untaged')
             for tag in tags:
@@ -145,19 +150,19 @@ def search(expr):
     for t in tags:
         if re.match(expr,t):
             r_t.append(t)
-    print('Results of names:')
+    print('Results of '+FM['NAME']+FM['BLD']+'Names'+FM['CLR']+':')
     if r_n==[]:
         print('No results',end='')
     for n in r_n:
         print(n,end='\t')
     print()
-    print('\nResults of categories:')
+    print('\nResults of '+FM['CATE']+FM['BLD']+'Categories'+FM['CLR']+':')
     if r_c==[]:
         print('No results',end='')
     for c in r_c:
         print(c,end='\t')
     print()
-    print('\nResults of tags:')
+    print('\nResults of '+FM['TAGS']+FM['BLD']+'Tags'+FM['CLR']+':')
     if r_t==[]:
         print('No results',end='')
     for t in r_t:
@@ -276,19 +281,19 @@ def listall(param):
         sort_c[cate].append(data['name'])
     if param:
         if param.lower()=='t' or param.lower()=='tag':
-            print('All cheatsheets sorted by tags:')
+            print('All cheatsheets sorted by '+FM['BLD']+'TAGS'+FM['CLR']+':')
             if 'untaged' in sort_t:
                 untaged=sort_t.pop('untaged')
                 sort_t['untaged']=untaged
             for t in sort_t:
-                print(t+':')
+                print(FM['TAGS']+FM['BLD']+'[ '+t+' ]'+FM['CLR'])
                 for n in sort_t[t]:
                     print(n,end='\t')
-                print()
+                print('\n')
         if param=='c' or param.lower()=='category':
-            print('All cheatsheets sorted by categories:')
+            print('All cheatsheets sorted by '+FM['BLD']+'CATEGORIES'+FM['CLR']+':')
             for c in sort_c:
-                print(c+':')
+                print(FM['CATE']+FM['BLD']+'[ '+c+' ]'+FM['CLR'])
                 for n in sort_c[c]:
                     print(n,end='\t')
                 print()
@@ -302,6 +307,13 @@ def config():
     CONFIG['CHEAT_PATH']=''
     CONFIG['EDITOR']='vim'
     CONFIG['AUTO_UPDATE']='true'
+    CONFIG['COLOR_OUTPUT']='true'
+    CONFIG['COLOR_BG_NAME']='242'
+    CONFIG['COLOR_FG_NAME']='255'
+    CONFIG['COLOR_BG_CATE']='130'
+    CONFIG['COLOR_FG_CATE']='226'
+    CONFIG['COLOR_BG_TAGS']='22'
+    CONFIG['COLOR_FG_TAGS']='46'
     if HOME!=None:
         f=open(CONFIG_PATH,'r')
         i=0
@@ -324,12 +336,20 @@ def config():
     else:
         print("Variable $HOME required but not found.")
         exit()
+    flag=0
     for k in CONFIG:
         if CONFIG[k]=='':
             print('Config err: '+k+' not set.')
+            flag=1
+    if flag==1:
+        exit()
     if not os.path.exists(CONFIG['CHEAT_PATH']):
         print('Config err: CHEAT_PATH='+CONFIG['CHEAT_PATH']+' does not exist, check if the path is valid.')
         exit()
+    if CONFIG['COLOR_OUTPUT'].lower() in ['true','t','1']:
+        FM['NAME']='\033[48;5;'+CONFIG['COLOR_BG_NAME']+';38;5;'+CONFIG['COLOR_FG_NAME']+'m'
+        FM['CATE']='\033[48;5;'+CONFIG['COLOR_BG_CATE']+';38;5;'+CONFIG['COLOR_FG_CATE']+'m'
+        FM['TAGS']='\033[48;5;'+CONFIG['COLOR_BG_TAGS']+'m\033[38;5;'+CONFIG['COLOR_FG_TAGS']+'m'
 
 def helps():
     print('Usage: ch [OPTION] [PARAMS]')
@@ -341,7 +361,7 @@ def helps():
     print('  -e, --edit NAME\tEdit existed cheatsheet by name')
     print('  -r, --remove NAMES\tRemove one or several cheatsheets by name')
     print('  -b, --bookmark NAMES\tToggle states for cheatsheets whether they are \n\t\t\tbookmarked')
-    print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories')
+    print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories; use "b" to list bookmarks')
     print('  -u, --update\t\tUpdate cache file, including bookmark list; Set \n\t\t\tAUTO_UPDATE in config to automaticly update after \n\t\t\tadd/edit/remove your cheatsheets')
     print('  -h, --help\t\tShow usage page')
     print()
