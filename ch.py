@@ -2,6 +2,7 @@
 
 import sys
 import os
+import re
 
 
 HOME=os.environ.get('HOME')
@@ -25,7 +26,7 @@ def options(args):
     elif opt=='u':
         update()
     elif opt=='s':
-        search(args[1:])
+        search(args[1])
     elif opt=='a':
         add(args[1])
     elif opt=='e':
@@ -56,42 +57,113 @@ def update():
     for name in lst:
         if name[-3:]=='.md':
             f=open(CONFIG['CHEAT_PATH']+'/'+name,'r')
-            head=[x for x in f.readline().split(' ') if x not in ['#','']][0].rstrip()
-            if head[0]=='#':
-                head=head[1:]
-            cate=[x for x in f.readline().split(':')[1].split(' ') if x not in ['']][0].rstrip()[1:-1]
-            f.readline()
+            cate=''
             tags=[]
-            t=''
-            b=False
-            for c in f.readline():
-                if c=='`':
-                    b=not b
-                if c!='`' and b is True:
-                    t=t+c
-                elif c=='`' and t!='':
-                    tags.append(t)
+            for line in f.readlines():
+                if 'Category:'==line[:9]:
+                    if line[9:].rstrip().strip()=='':
+                        continue
+                    flag=0
+                    for s in line[9:].rstrip():
+                        if s=='`':
+                            if flag==0:
+                                flag=1
+                                continue
+                            else:
+                                break
+                        if flag==1:
+                            cate+=s
+                if 'Tags:'==line[:5]:            
                     t=''
-            line=head+' '+cate
-            for t in tags:
-                line+=' '+t
-            table.write(line+'\n')
+                    b=False
+                    for c in line:
+                        if c=='`':
+                            b=not b
+                        if c!='`' and b is True:
+                            t=t+c
+                        elif c=='`' and t!='':
+                            if t=='untaged':
+                                print('Format err: '+name+'.md : "untaged" can not be used for tag.')
+                                print('Update failed.')
+                                exit()
+                            tags.append(t)
+                            t=''
+                if '---'==line.rstrip().strip():
+                    break
+            record=name[:-3]+' '+cate
+            if cate=='':
+                cate='Default'
+            if tags==[]:
+                tags.append('untaged')
+            for tag in tags:
+                record+=' '+tag
+            table.write(record+'\n')
             f.close()
     table.close()
-    bookmarks=open(CONFIG['CHEAT_PATH']+'/.bookmarks','r+')
+    path=CONFIG['CHEAT_PATH']+'/.bookmarks'
+    if not os.path.exists(path):
+        os.system('touch '+path)
+    bookmarks=open(path,'r')
     bm=[]
-    for line in f.readlines():
+    for line in bookmarks.readlines():
         bm.append(line.rstrip())
+    bookmarks.close()
+    bookmarks=open(path,'w')
     for name in bm:
-        if name not in lst:
+        if name+'.md' not in lst:
             bm.remove(name)
     for name in bm:
         bookmarks.write(name+'\n')
     bookmarks.close()
 
-def search(keywords):
-    print(keywords)
-    return
+def search(expr):
+    if bool(CONFIG['AUTO_UPDATE']):
+        update()
+    table=open(CONFIG['CHEAT_PATH']+'/.table', 'r')
+    names=[]
+    cates=[]
+    tags=[]
+    for line in table.readlines():
+        name,cate,tag=line.rstrip().strip().split(' ',2)
+        if name not in names:
+            names.append(name)
+        if cate not in cates:
+            cates.append(cate)
+        for t in tag.split(' '):
+            if t not in tags:
+                tags.append(t)
+    tags.remove('untaged')
+    r_n=[]
+    r_c=[]
+    r_t=[]
+    for n in names:
+        if re.match(expr,n):
+            r_n.append(n)
+    for c in cates:
+        if re.match(expr,c):
+            r_c.append(c)
+    for t in tags:
+        if re.match(expr,t):
+            r_t.append(t)
+    print('Results of names:')
+    if r_n==[]:
+        print('No results',end='')
+    for n in r_n:
+        print(n,end='\t')
+    print()
+    print('\nResults of categories:')
+    if r_c==[]:
+        print('No results',end='')
+    for c in r_c:
+        print(c,end='\t')
+    print()
+    print('\nResults of tags:')
+    if r_t==[]:
+        print('No results',end='')
+    for t in r_t:
+        print(t,end='\t')
+    print()
+    return r_n,r_c,r_t
 
 def add(name):
     if exist(name):
@@ -104,8 +176,7 @@ def add(name):
     f.write(head)
     f.close()
     if bool(CONFIG['AUTO_UPDATE']):
-        update()
-        
+        update()   
 
 def edit(name):
     if not exist(name):
@@ -119,7 +190,7 @@ def remove(names):
         if not exist(name):
             print('Failed: File "'+name+'.md" not found.\n')
             exit()
-        os.system('rm '+name+'.md')
+        os.system('rm '+CONFIG['CHEAT_PATH']+'/'+name+'.md')
     if bool(CONFIG['AUTO_UPDATE']):
         update()
 
@@ -170,8 +241,62 @@ def bookmark(names):
         print(lst)
 
 def listall(param):
-    print(param)
-    return
+    if bool(CONFIG['AUTO_UPDATE']):
+        update()
+    if param and (param.lower()=='b' or param.lower()=='bookmark'):
+        bookmarks=open(CONFIG['CHEAT_PATH']+'/.bookmarks','r')
+        bm=[]
+        for line in bookmarks:
+            bm.append(line.rstrip())
+        bookmarks.close()
+        print('List all bookmarks:')
+        if bm==[]:
+            print('No bookmarks')
+            return
+        for n in bm:
+            print(n,end='\t')
+        print()
+        return
+    table=open(CONFIG['CHEAT_PATH']+'/.table', 'r')
+    datas=[]
+    sort_t={}
+    sort_c={}
+    for line in table.readlines():
+        data={}
+        data['name'],cate,tags=line.rstrip().strip().split(' ',2)
+        data['cate']=cate
+        data['tags']=tags.split(' ')
+        datas.append(data)
+        for t in data['tags']:
+            if t not in sort_t:
+                sort_t[t]=[]
+            sort_t[t].append(data['name'])
+        if cate not in sort_c:
+            sort_c[cate]=[]
+        sort_c[cate].append(data['name'])
+    if param:
+        if param.lower()=='t' or param.lower()=='tag':
+            print('All cheatsheets sorted by tags:')
+            if 'untaged' in sort_t:
+                untaged=sort_t.pop('untaged')
+                sort_t['untaged']=untaged
+            for t in sort_t:
+                print(t+':')
+                for n in sort_t[t]:
+                    print(n,end='\t')
+                print()
+        if param=='c' or param.lower()=='category':
+            print('All cheatsheets sorted by categories:')
+            for c in sort_c:
+                print(c+':')
+                for n in sort_c[c]:
+                    print(n,end='\t')
+                print()
+    else:
+        print('All cheatsheets:')
+        for d in datas:
+            print(d['name'],end='\t')
+        print()
 
 def config():
     CONFIG['CHEAT_PATH']=''
@@ -206,18 +331,17 @@ def config():
         print('Config err: CHEAT_PATH='+CONFIG['CHEAT_PATH']+' does not exist, check if the path is valid.')
         exit()
 
-
 def helps():
     print('Usage: ch [OPTION] [PARAMS]')
     print('A cheatsheets management tool, for users establishing their own cheatsheet \nlibrary.')
     print()
     print('options:')
-    print('  -s, --search\t\tSearch files by keywords, support several words in \n\t\t\ta row, keywors can be tags/categories/names, regex \n\t\t\tsupported')
+    print('  -s, --search EXPR\tSearch cheatsheets by regluar expression')
     print('  -a, --add NAME\tAdd a new cheatsheet with given name')
     print('  -e, --edit NAME\tEdit existed cheatsheet by name')
     print('  -r, --remove NAMES\tRemove one or several cheatsheets by name')
     print('  -b, --bookmark NAMES\tToggle states for cheatsheets whether they are \n\t\t\tbookmarked')
-    print('  -l, --list [PARAMS]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories')
+    print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories')
     print('  -u, --update\t\tUpdate cache file, including bookmark list; Set \n\t\t\tAUTO_UPDATE in config to automaticly update after \n\t\t\tadd/edit/remove your cheatsheets')
     print('  -h, --help\t\tShow usage page')
     print()
