@@ -1,11 +1,4 @@
-#!/home/tank/Documents/programs/anaconda3/bin/python
-#!/home/tank/Documents/programs/anaconda3/bin/python
-#!/usr/bin/python
-#!/usr/bin/python
-#!/usr/bin/python
-#!/usr/bin/python
-#!/home/tank/Documents/programs/anaconda3/bin/python
-#!/home/tank/Documents/programs/anaconda3/bin/python
+
 import sys
 import os
 import re
