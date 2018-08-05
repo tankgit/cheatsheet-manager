@@ -1,30 +1,34 @@
 #!/home/tank/Documents/programs/anaconda3/bin/python
-
+#!/home/tank/Documents/programs/anaconda3/bin/python
+#!/usr/bin/python
+#!/usr/bin/python
+#!/usr/bin/python
+#!/usr/bin/python
+#!/home/tank/Documents/programs/anaconda3/bin/python
+#!/home/tank/Documents/programs/anaconda3/bin/python
 import sys
 import os
 import re
 
 
 HOME=os.environ.get('HOME')
-CONFIG_PATH=HOME+'/.config/ch.conf'
+CONFIG_PATH=HOME+'/.config/chmgr.conf'
 CONFIG={}
 FM={}
-FM['CLR']='\033[0m'
-FM['BLD']='\033[1m'
-FM['NAME']=''
-FM['CATE']=''
-FM['TAGS']=''
-FM['FNAME']=''
-FM['FCATE']=''
-FM['FTAGS']=''
+REG_P1='^-[husaerblL]$'
+REG_P2='^--(help|update|search|add|edit|remove|bookmark|list)$'
+REG_NAME='^[a-zA-Z0-9][a-zA-Z0-9\-_]*$'
 
 def options(args):
-    if args==None:
+    if args==[]:
         helps()
-    if len(args[0])==2 and args[0][0]=='-':
+    if re.match(REG_P1,args[0]):
         opt=args[0][1]
-    elif len(args[0])>2 and args[0][:2]=='--' and args[0][2:] in ['help','update','search','add','edit','remove','bookmark','list']:
+    elif re.match(REG_P2,args[0]):
         opt=args[0][2]
+    elif re.match(REG_NAME,args[0]):
+        view(args[0])
+        return
     else:
         helps()
     if len(args)<2 and opt not in ['u','l','L']:
@@ -54,6 +58,12 @@ def options(args):
         helps()
     
     return
+
+def view(name):
+    if not exist(name):
+        print('Open failed: file "'+name+'.md" not found.')
+        exit()
+    os.system(CONFIG['VIEWER']+' '+CONFIG['CHEAT_PATH']+'/'+name+'.md')
 
 def exist(name):
     allfile=os.listdir(CONFIG['CHEAT_PATH'])
@@ -165,19 +175,22 @@ def search(expr):
     if r_c==[]:
         print('No results',end='')
     for c in r_c:
-        print(FM['FNAME']+n+FM['CLR'],end='\t')
+        print(FM['FNAME']+c+FM['CLR'],end='\t')
     print()
     print('\nResults of '+FM['TAGS']+FM['BLD']+'Tags'+FM['CLR']+':')
     if r_t==[]:
         print('No results',end='')
     for t in r_t:
-        print(FM['FNAME']+n+FM['CLR'],end='\t')
+        print(FM['FNAME']+t+FM['CLR'],end='\t')
     print()
     return r_n,r_c,r_t
 
 def add(name):
+    if not re.match(REG_NAME,name):
+        print('Add failed: file name should start with a letter or a digit, and only consists of letters, digits, "-", "_".')
+        exit()
     if exist(name):
-        print('Failed: File "'+name+'.md" already existed.\n')
+        print('Add failed: file "'+name+'.md" already existed.')
         exit()
     title=name
     category='default'
@@ -185,23 +198,36 @@ def add(name):
     f=open(CONFIG['CHEAT_PATH']+'/'+name+'.md','w')
     f.write(head)
     f.close()
-    if bool(CONFIG['AUTO_UPDATE']):
+    print('Cheatsheet added: '+name)
+    if CONFIG['AUTO_UPDATE'].lower() in ['true','t','1']:
         update()   
 
 def edit(name):
     if not exist(name):
-        print('Failed: File "'+name+'.md" not found.\n')
+        print('Open failed: file "'+name+'.md" not found.')
         exit()
     os.system(CONFIG['EDITOR']+' '+CONFIG['CHEAT_PATH']+'/'+name+'.md')
 
 def remove(names):
     names=list(set(names))
+    success=[]
+    failed=[]
     for name in names:
         if not exist(name):
-            print('Failed: File "'+name+'.md" not found.\n')
-            exit()
+            print('Failed: File "'+name+'.md" not found.')
+            failed.append(name)
+            continue
         os.system('rm '+CONFIG['CHEAT_PATH']+'/'+name+'.md')
-    if bool(CONFIG['AUTO_UPDATE']):
+        success.append(name)
+    print('Removed: ')
+    for name in success:
+        print(name,end=' ')
+    print()
+    print('Failed to remove:')
+    for name in failed:
+        print(name,end=' ')
+    print()
+    if CONFIG['AUTO_UPDATE'].lower() in ['true','t','1']:
         update()
 
 def bookmark(names):
@@ -251,7 +277,7 @@ def bookmark(names):
         print(lst)
 
 def listall(param):
-    if bool(CONFIG['AUTO_UPDATE']):
+    if CONFIG['AUTO_UPDATE'].lower() in ['true','t','1']:
         update()
     if param and (param=='b' or param=='bookmark'):
         bookmarks=open(CONFIG['CHEAT_PATH']+'/.bookmarks','r')
@@ -337,7 +363,8 @@ def listall(param):
 
 def config():
     CONFIG['CHEAT_PATH']=''
-    CONFIG['EDITOR']='vim'
+    CONFIG['EDITOR']=''
+    CONFIG['VIEWER']=''
     CONFIG['AUTO_UPDATE']='true'
     CONFIG['COLOR_OUTPUT']='true'
     CONFIG['COLOR_BG_NAME']='242'
@@ -346,6 +373,14 @@ def config():
     CONFIG['COLOR_FG_CATE']='226'
     CONFIG['COLOR_BG_TAGS']='22'
     CONFIG['COLOR_FG_TAGS']='46'
+    FM['CLR']='\033[0m'
+    FM['BLD']='\033[1m'
+    FM['NAME']=''
+    FM['CATE']=''
+    FM['TAGS']=''
+    FM['FNAME']=''
+    FM['FCATE']=''
+    FM['FTAGS']=''
     if HOME!=None:
         f=open(CONFIG_PATH,'r')
         i=0
@@ -374,6 +409,8 @@ def config():
             print('Config err: '+k+' not set.')
             flag=1
     if flag==1:
+        print()
+        print('Please check '+HOME+'/.local/chmgr.conf')
         exit()
     if not os.path.exists(CONFIG['CHEAT_PATH']):
         print('Config err: CHEAT_PATH='+CONFIG['CHEAT_PATH']+' does not exist, check if the path is valid.')
@@ -387,7 +424,7 @@ def config():
         FM['FTAGS']='\033[38;5;'+CONFIG['COLOR_FG_TAGS']+'m'
 
 def helps():
-    print('Usage: ch [OPTION] [PARAMS]')
+    print('Usage: chmgr Filename \n\tor\n\tchmgr [OPTION] [PARAMS]')
     print('A cheatsheets management tool, for users establishing their own cheatsheet \nlibrary.')
     print()
     print('options:')
@@ -396,7 +433,7 @@ def helps():
     print('  -e, --edit NAME\tEdit existed cheatsheet by name')
     print('  -r, --remove NAMES\tRemove one or several cheatsheets by name')
     print('  -b, --bookmark NAMES\tToggle states for cheatsheets whether they are \n\t\t\tbookmarked')
-    print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories; use "b" to list bookmarks')
+    print('  -l, --list [PARAM]\tList all cheatsheets; use parameter "t" to sort by \n\t\t\ttags, "c" by categories; use "b" to list bookmarks; \n\t\t\tuse "C","T" to show detailed list')
     print('  -L\t\t\tList all cheatsheets with details')
     print('  -u, --update\t\tUpdate cache file, including bookmark list; Set \n\t\t\tAUTO_UPDATE in config to automaticly update after \n\t\t\tadd/edit/remove your cheatsheets')
     print('  -h, --help\t\tShow usage page')
